@@ -1,12 +1,13 @@
+import mongodb from "mongodb"
 let restaurants
 
 export default class RestaurantsDAO {
     static async injectDB(conn) {
-        if(restaurants) {
+        if (restaurants) {
             return
         }
         try {
-            restaurants = await conn.db(process.env.RESTREVIEWS_NS).collection("restaurantss")
+            restaurants = await conn.db(process.env.RESTREVIEWS_NS).collection("restaurants")
         } catch (e) {
             console.error(`Unable to establish a collection handle in restaurantsDAO: ${e}`,)
         }
@@ -18,11 +19,11 @@ export default class RestaurantsDAO {
         restaurantsPerPage = 20,
     } = {}) {
         let query
-        if(filters) {
-            if("name" in filters) {
+        if (filters) {
+            if ("name" in filters) {
                 query = { $text: { $search: filters["name"] } }
             } else if ("cuisine" in filters) {
-                query = { "cuisine": {$eq: filters["cuisine"] } }
+                query = { "cuisine": { $eq: filters["cuisine"] } }
             } else if ("zipcode" in filters) {
                 query = { "address.zipcode": { $eq: filters["zipcode"] } }
             }
@@ -31,13 +32,11 @@ export default class RestaurantsDAO {
         let cursor
 
         try {
-            cursor = await  restaurants.find(query)
-        } catch(e) {
-            console.error(`Unable to issue FIND command, ${e}`)
-            return { 
-                restaurantsList: [], 
-                totalNumRestaurants: 0
-            }
+            cursor = await restaurants
+                .find(query)
+        } catch (e) {
+            console.error(`Unable to issue find command, ${e}`)
+            return { restaurantsList: [], totalNumRestaurants: 0 }
         }
 
         const displayCursor = cursor.limit(restaurantsPerPage).skip(restaurantsPerPage * page)
@@ -45,16 +44,10 @@ export default class RestaurantsDAO {
         try {
             const restaurantsList = await displayCursor.toArray()
             const totalNumRestaurants = await restaurants.countDocuments(query)
-            return {
-                restaurantsList,
-                totalNumRestaurants
-            }
-        } catch(e) {
+            return { restaurantsList, totalNumRestaurants }
+        } catch (e) {
             console.error(`Unable to convert cursor to array or problem counting documents, ${e}`,)
-            return {
-                restaurantsList: [],
-                totalNumRestaurants: 0
-            }
+            return { restaurantsList: [], totalNumRestaurants: 0 }
         }
     }
 }
